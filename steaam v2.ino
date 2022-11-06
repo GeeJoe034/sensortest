@@ -16,9 +16,9 @@
  
 // See https://thingsboard.io/docs/getting-started-guides/helloworld/
 // to understand how to obtain an access token
-#define TOKEN               "1qqdS4WTLYcsZROtBWao"
+#define TOKEN               "8iLh6HLcvKAciVauabfO"
 // ThingsBoard server instance.
-#define THINGSBOARD_SERVER  "3.232.129.25"
+#define THINGSBOARD_SERVER  "44.204.112.174"
  
 // Baud rate for debug serial
 #define SERIAL_DEBUG_BAUD    9600
@@ -43,12 +43,12 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
  
 // Main application loop delay
-int quant = 200;
- 
+int quant = 250;
+ int buttonState;
 // Initial period of LED cycling.
 int led_delay = 250;
 // Period of sending a temperature/humidity data.
-int send_delay = 1000;
+int send_delay = 250;
  
 // Time passed after LED was turned ON, milliseconds.
 int led_passed = 0;
@@ -142,15 +142,40 @@ void setup() {
  
   // Initialize temperature sensor
   sensors.begin();
+
+  
 }
  
 // Main application loop
 void loop() {
-  delay(1000);
- 
+  
+  buttonState = digitalRead(waterLavel);
+    sensors.requestTemperatures(); 
+    float temp = sensors.getTempCByIndex(0);
+    buttonState = digitalRead(waterLavel);
+    sensors.requestTemperatures();
+  lcd.setCursor(0,0);
+  lcd.print("Temp:");
+  lcd.setCursor(0,1);
+  lcd.print("Wather:");  
+ if (buttonState == HIGH) {
+        lcd.setCursor(8,1);
+        lcd.print("LOW");
+        digitalWrite(sp,1);
+        delay(500);
+        digitalWrite(sp,0);
+        delay(500);
+       } else {
+        lcd.setCursor(8,1);
+        lcd.print("HIGH");
+        digitalWrite(sp,0);
+        }
+      
+      
   led_passed += quant;
   send_passed += quant;
- 
+  
+    
   // Check if next LED should be lit up
   if (led_passed > led_delay) {
     // Turn off current LED
@@ -171,10 +196,12 @@ void loop() {
   if (!tb.connected()) {
     subscribed = false;
  
-    // Connect to the ThingsBoard
-    Serial.print("Connecting to: ");
+   lcd.setCursor(0,0);
+    lcd.print("Connecting to: ");
+    
     Serial.print(THINGSBOARD_SERVER);
-    Serial.print(" with token ");
+    lcd.setCursor(0,1);
+    lcd.print(" with token ");
     Serial.println(TOKEN);
     if (!tb.connect(THINGSBOARD_SERVER, TOKEN)) {
       Serial.println("Failed to connect");
@@ -197,34 +224,25 @@ void loop() {
     subscribed = true;
   }
  
-  // Check if it is a time to send DHT22 temperature and humidity
+      lcd.setCursor(6,0);
+      lcd.print(temp);
   if (send_passed > send_delay) {
-    Serial.println("Sending data...");
- 
-    // Uploads new telemetry to ThingsBoard using MQTT.
-    // See https://thingsboard.io/docs/reference/mqtt-api/#telemetry-upload-api
-    // for more details
-    int buttonState = digitalRead(waterLavel);
-    sensors.requestTemperatures(); 
-    float temp = sensors.getTempCByIndex(0);   
+    Serial.println("Sending data...");   
     if (isnan(temp) || isnan(buttonState)) {
-      Serial.println("Failed to read from DHT sensor!");
+      Serial.println("Failed to read from ds18B20 sensor!");
     } else {
       tb.sendTelemetryFloat("temperature", temp);
       tb.sendTelemetryFloat("humidity", buttonState);
       Serial.println(temp);
       Serial.println(buttonState);
-      lcd.setCursor(0,0);
-      lcd.print("Temp:");
-      lcd.setCursor(0,1);
-      lcd.print("Wather:");
-      lcd.setCursor(6,0);
-      lcd.print(temp);
+      
+      
+      
     }
  
     send_passed = 0;
   }
- 
+      
   // Process messages
   tb.loop();
   lcd.clear();   
@@ -233,7 +251,8 @@ void loop() {
  
 void InitWiFi()
 {
-  Serial.println("Connecting to AP ...");
+  lcd.setCursor(0,0);
+  lcd.println("Connecting to AP ...");
   // attempt to connect to WiFi network
  
   WiFi.begin(WIFI_AP_NAME, WIFI_PASSWORD);
